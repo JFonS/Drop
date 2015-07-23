@@ -7,6 +7,9 @@ public class Ball : MonoBehaviour
     private static readonly string WinText = "YOU WIN", LoseText = "YOU LOSE";
     private static readonly float DelimiterOffset = 0.3f; //This is the ratio of the screen at which the colors lerp when it's somebody's turn
 
+    public float delimiter = 0.5f; //This is the imaginary line which when is crossed by the ball, the ball is automatically dropped
+    public float delimiterSpeed = 1.0f;
+
     public static Vector3 initialBallPosition, initialBallScale;
     public bool gameStarted = false, gameFinished;
 
@@ -21,6 +24,8 @@ public class Ball : MonoBehaviour
     public float disaccelerationY = 100.0f; //The amount of disacceleration (speed of the Lerp) when the ball is thrown very fast on the y axis
 
     private int topScore, botScore;
+
+    public Image bgUp, bgDown;
     public Text topWinText, botWinText;
     private Color pointBallInitialColorTop, pointBallInitialColorBot; 
     public Image pointBallTop0, pointBallTop1, pointBallTop2;
@@ -36,6 +41,7 @@ public class Ball : MonoBehaviour
         pointBallInitialColorBot = pointBallBot0.color;
         topScore = botScore = 0;
 
+        topTurn = (Random.Range(1, 3) == 2);
         Reset();
     }
 
@@ -88,10 +94,7 @@ public class Ball : MonoBehaviour
             if (Input.GetMouseButtonDown(0))
             {
                 RaycastHit2D hit = Physics2D.Raycast(new Vector2(touchWorldPoint.x, touchWorldPoint.y), Vector2.zero, Mathf.Infinity);
-                if (hit && hit.collider && hit.collider.gameObject == gameObject)
-                {
-                    OnHold();
-                }
+                if (hit && hit.collider && hit.collider.gameObject == gameObject) OnHold();
             }
 
             if (Input.GetMouseButtonUp(0))
@@ -119,16 +122,29 @@ public class Ball : MonoBehaviour
             }
             if (Input.GetMouseButtonDown(0)) EndGame();
         }
+
+        //Update the graphical(canvas bgs) delimiter
+        delimiter = Mathf.Lerp(delimiter, (topTurn ? 0.25f : 0.75f), Time.deltaTime * delimiterSpeed);
+        bgUp.GetComponent<LayoutElement>().flexibleHeight = delimiter;
+        bgDown.GetComponent<LayoutElement>().flexibleHeight = 1.0f - delimiter;
     }
 
     void OnHold()
     {
+        Debug.Log("OnHold");
+        Debug.Log("topTurn before: " + topTurn);
+        Debug.Log("screenUp: " + IsScreenUp());
+
         bool lastTopTurn = topTurn;
         if (IsScreenUp() && !topTurn) topTurn = true;
         else if (!IsScreenUp() && topTurn) topTurn = false;
+
         bool changedTurn = (lastTopTurn != topTurn);
         if (changedTurn) OnChangeTurn();
+
         speedY = 0.0f;
+
+        Debug.Log("topTurn after: " + topTurn);
 
         gameStarted = true;
         holding = true;
@@ -178,13 +194,13 @@ public class Ball : MonoBehaviour
         gameStarted = gameFinished = false;
         holding = false;
         transform.localScale = initialBallScale;
-        if(IsScreenUp()) transform.position = initialBallPosition;
+        topTurn = !topTurn;
+        if(topTurn) transform.position = initialBallPosition;
         else
         {
             float initY = GetScreenDown() + (GetScreenUp() - initialBallPosition.y);
             transform.position = new Vector3(initialBallPosition.x, initY, initialBallPosition.z);
         }
-        topTurn = !topTurn;
         upwardsGravity = !topTurn;
 
         topWinText.text = "";
@@ -218,7 +234,10 @@ public class Ball : MonoBehaviour
     
     //Gets and Isses //////////////////////////////////////////////////////////////////////////////////////////////////
     Vector3 GetWorldPoint(Vector3 screenPos) { return Camera.main.ScreenToWorldPoint(screenPos); }
-    bool IsScreenUp() { return transform.position.y >= Camera.main.ScreenToWorldPoint(new Vector3(0.0f, Screen.height / 2, 0.0f)).y; }
+    bool IsScreenUp() 
+    {
+        return transform.position.y >= Camera.main.ScreenToWorldPoint(new Vector3(0.0f, Screen.height * (topTurn ? 0.25f : 0.75f), 0.0f)).y; 
+    }
     float GetBallWidth() { return GetComponent<SpriteRenderer>().bounds.size.x; }
     float GetBallHeight()  { return GetComponent<SpriteRenderer>().bounds.size.y; }
     float GetScreenUp() { return Camera.main.ScreenToWorldPoint(new Vector3(0.0f, Screen.height, 0.0f)).y; }

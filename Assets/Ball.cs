@@ -72,7 +72,7 @@ public class Ball : MonoBehaviour
                 //speedY = (touchWorldPoint.y - transform.position.y) / Time.deltaTime * 0.05f;
 				//
 
-                if (IsRightOut() || IsLeftOut()) speedX = 0.0f;
+                //if (IsRightOut() || IsLeftOut()) speedX = 0.0f;
                 CorrectXPosition();
             }
 

@@ -13,15 +13,17 @@ public class Ball : MonoBehaviour
     public static Vector3 initialBallPosition, initialBallScale;
     public bool gameStarted = false, gameFinished;
 
-    public static readonly float Gravity = 0.25f, MaxSpeedX = 10.0f, MaxSpeedY = 10.0f;
+    public static readonly float Gravity = 0.25f;
     public bool upwardsGravity = false;
     public bool turnReady = true, topTurn = true;
     public bool holding = false;
 
     public float decreaseRate = 0.05f; //The rate at which the scale of the ball decreases
     public float speedX = 0.0f, speedY = 0.0f;
-    public float accX = 1.0f, dampingX = 0.98f;
+    public float accX = 1.0f;
     public float disaccelerationY = 100.0f; //The amount of disacceleration (speed of the Lerp) when the ball is thrown very fast on the y axis
+
+	private int pickingFingerId = -1;
 
     private int topScore, botScore;
 
@@ -64,11 +66,11 @@ public class Ball : MonoBehaviour
                 Vector3 newPos = Vector3.Lerp(transform.position, touchWorldPoint, Time.deltaTime * accX);
                 transform.position = new Vector3(newPos.x, newPos.y, 0.0f);
 
-                //Set the speedX based on the finger movement
-                speedX = (touchWorldPoint.x - transform.position.x) / Time.deltaTime * 0.05f;
-                speedX = Mathf.Clamp(speedX, -MaxSpeedX, MaxSpeedX);
-
-                speedY = (touchWorldPoint.y - transform.position.y) / Time.deltaTime * 0.05f;
+                //Set the speedX/Y based on the finger movement
+                //Mouse version
+				//speedX = (touchWorldPoint.x - transform.position.x) / Time.deltaTime * 0.05f;
+                //speedY = (touchWorldPoint.y - transform.position.y) / Time.deltaTime * 0.05f;
+				//
 
                 if (IsRightOut() || IsLeftOut()) speedX = 0.0f;
                 CorrectXPosition();
@@ -77,20 +79,9 @@ public class Ball : MonoBehaviour
             if (!holding && gameStarted)
             {
                 transform.position += Vector3.right * speedX * Time.deltaTime;
-
-                if (topTurn && !IsScreenUp() || !topTurn && IsScreenUp())
-                {
-                    if (speedY < -MaxSpeedY) speedY = Mathf.Lerp(speedY, -MaxSpeedY, Time.deltaTime * Mathf.Abs(speedY / MaxSpeedY) * disaccelerationY);
-                    else if (speedY > MaxSpeedY) speedY = Mathf.Lerp(speedY, MaxSpeedY, Time.deltaTime * Mathf.Abs(speedY / MaxSpeedY) * disaccelerationY);
-                }
-
                 transform.position += Vector3.up * speedY * Time.deltaTime; //move with the gravity
 
                 if (IsRightOut() || IsLeftOut()) speedX *= -1.0f; //Bounce on side walls
-                else
-                {
-                    speedX *= dampingX;
-                }
                 CorrectXPosition();
             }
 
@@ -107,12 +98,28 @@ public class Ball : MonoBehaviour
 
             foreach (Touch t in Input.touches)
             {
-                touchWorldPoint = GetWorldPoint(t.position);
+				if(pickingFingerId != -1 && pickingFingerId != t.fingerId)continue;
+
+				touchWorldPoint = GetWorldPoint(t.position);
                 RaycastHit2D hit = Physics2D.Raycast(new Vector2(touchWorldPoint.x, touchWorldPoint.y), Vector2.zero, Mathf.Infinity);
                 if (hit && hit.collider && hit.collider.gameObject == gameObject)
                 {
-                    if (t.phase == TouchPhase.Canceled || t.phase == TouchPhase.Ended) OnDrop();
-                    else if (t.phase == TouchPhase.Began) OnHold();
+                    if (t.phase == TouchPhase.Canceled || t.phase == TouchPhase.Ended) 
+					{
+						OnDrop();
+						pickingFingerId = -1;
+					}
+                    else if (t.phase == TouchPhase.Began) 
+					{
+						OnHold();
+						pickingFingerId = t.fingerId;
+					}
+					else if(t.phase == TouchPhase.Moved)
+					{
+						//Touch version
+						speedX = t.deltaPosition.x / t.deltaTime * 0.002f;
+						speedY = t.deltaPosition.y / t.deltaTime * 0.002f;
+					}
                 }
             }
         }
@@ -150,9 +157,6 @@ public class Ball : MonoBehaviour
     void OnHold()
     {
         if (!turnReady) return;
-        Debug.Log("OnHold");
-        Debug.Log("topTurn before: " + topTurn);
-        Debug.Log("screenUp: " + IsScreenUp());
 
         bool lastTopTurn = topTurn;
         if (IsScreenUp() && !topTurn) topTurn = true;
@@ -163,8 +167,6 @@ public class Ball : MonoBehaviour
 
         speedY = 0.0f;
 
-        Debug.Log("topTurn after: " + topTurn);
-
         gameStarted = true;
         holding = true;
         upwardsGravity = !topTurn;
@@ -172,7 +174,6 @@ public class Ball : MonoBehaviour
 
     void OnChangeTurn()
     {
-        Debug.Log("CHANGED");
         transform.localScale -= new Vector3(decreaseRate, decreaseRate, decreaseRate);
         SetTurnReady(false);
     }

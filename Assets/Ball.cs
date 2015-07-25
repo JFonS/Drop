@@ -54,6 +54,12 @@ public class Ball : MonoBehaviour
 
     void Update()
     {
+        if (Input.GetKey(KeyCode.Escape))
+        {
+            Application.LoadLevel("Menu");
+            return;
+        }
+
         if (!gameFinished)
         {
             if ((topTurn && !IsScreenUp() && turnReady) || (!topTurn && IsScreenUp() && turnReady)) OnDrop();
@@ -66,22 +72,18 @@ public class Ball : MonoBehaviour
                 Vector3 newPos = Vector3.Lerp(transform.position, touchWorldPoint, Time.deltaTime * accX);
                 transform.position = new Vector3(newPos.x, newPos.y, 0.0f);
 
-                //Set the speedX/Y based on the finger movement
-                //Mouse version
-				//speedX = (touchWorldPoint.x - transform.position.x) / Time.deltaTime * 0.05f;
-                //speedY = (touchWorldPoint.y - transform.position.y) / Time.deltaTime * 0.05f;
-				//
-
-                //if (IsRightOut() || IsLeftOut()) speedX = 0.0f;
+                if (IsRightOut() || IsLeftOut()) speedX = 0.0f;
                 CorrectXPosition();
+                if (topTurn && IsScreenUp() || !topTurn && !IsScreenUp()) SetTurnReady(true);
             }
 
             if (!holding && gameStarted)
             {
+                
                 transform.position += Vector3.right * speedX * Time.deltaTime;
                 transform.position += Vector3.up * speedY * Time.deltaTime; //move with the gravity
 
-                if (IsRightOut() || IsLeftOut()) speedX *= -1.0f; //Bounce on side walls
+                if (IsRightOut() || IsLeftOut()) speedX *= -0.8f; //Bounce on side walls
                 CorrectXPosition();
             }
 
@@ -116,9 +118,19 @@ public class Ball : MonoBehaviour
 					}
 					else if(t.phase == TouchPhase.Moved)
 					{
+                        
 						//Touch version
-						speedX = t.deltaPosition.x / t.deltaTime * 0.002f;
-						speedY = t.deltaPosition.y / t.deltaTime * 0.002f;
+                        Vector2 delta = GetWorldVector(t.deltaPosition);
+                        
+                        if (Mathf.Abs(delta.x) >= 0.001)
+                            if (t.deltaTime > 0) speedX = delta.x / t.deltaTime;
+                        else
+                            speedX = 0.0f;
+
+                        if (Mathf.Abs(delta.y) >= 0.001 && t.deltaTime > 0)
+                            if (t.deltaTime > 0)  speedY = delta.y / t.deltaTime * 0.5f;
+                        else
+                            speedY = 0.0f;
 					}
                 }
             }
@@ -138,7 +150,7 @@ public class Ball : MonoBehaviour
         bgUp.GetComponent<LayoutElement>().flexibleHeight = delimiter;
         bgDown.GetComponent<LayoutElement>().flexibleHeight = 1.0f - delimiter;
 
-        if (topTurn && IsScreenUp() || !topTurn && !IsScreenUp()) SetTurnReady(true);
+        
     }
 
     void SetTurnReady(bool state)
@@ -224,6 +236,7 @@ public class Ball : MonoBehaviour
             float initY = GetScreenDown() + (GetScreenUp() - initialBallPosition.y);
             transform.position = new Vector3(initialBallPosition.x, initY, initialBallPosition.z);
         }
+        this.GetComponent<SpriteRenderer>().color = Color.gray;
         upwardsGravity = !topTurn;
 
         topWinText.text = "";
@@ -257,6 +270,13 @@ public class Ball : MonoBehaviour
     
     //Gets and Isses //////////////////////////////////////////////////////////////////////////////////////////////////
     Vector3 GetWorldPoint(Vector3 screenPos) { return Camera.main.ScreenToWorldPoint(screenPos); }
+    
+    Vector2 GetWorldVector(Vector2 v)
+    { /// THIS ONLY WORKS IF THE CAMERA IS AT (0,0)
+        v.x += Screen.width / 2;
+        v.y += Screen.height / 2;
+        return Camera.main.ScreenToWorldPoint(v); 
+    } 
     bool IsScreenUp() 
     {
         return transform.position.y >= Camera.main.ScreenToWorldPoint(new Vector3(0.0f, Screen.height * (topTurn ? 0.75f : 0.25f), 0.0f)).y; 

@@ -27,6 +27,7 @@ public class Ball : MonoBehaviour
 
     private int topScore, botScore;
 
+    public GameObject markTop, markBot;
     public Image bgUp, bgDown;
     public Text topWinText, botWinText;
     private Color pointBallInitialColorTop, pointBallInitialColorBot;
@@ -37,15 +38,26 @@ public class Ball : MonoBehaviour
 
     void Start()
     {
-        topTurn = IsScreenUp();
+
+        topTurn = (Random.Range(1, 3) == 2);
+        Vector3 startPos = GetWorldPoint(new Vector3(Screen.width/2.0f, Screen.height/8.0f * 7.0f, 0.0f));
+
+        transform.position = new Vector3(startPos.x, startPos.y, transform.position.z);
+
         initialBallPosition = new Vector3(transform.position.x, transform.position.y, transform.position.z);
         initialBallScale = new Vector3(transform.localScale.x, transform.localScale.y, transform.localScale.z);
+
+
+        markTop.transform.position = new Vector3(startPos.x, startPos.y, transform.position.z);
+        markBot.transform.position = new Vector3(startPos.x, GetScreenDown() + (GetScreenUp() - initialBallPosition.y), transform.position.z);
+
+        markTop.SetActive(false);
+        markBot.SetActive(false);
 
         pointBallInitialColorTop = pointBallTop0.color;
         pointBallInitialColorBot = pointBallBot0.color;
         topScore = botScore = 0;
 
-        topTurn = (Random.Range(1, 3) == 2);
         Reset();
     }
 
@@ -122,7 +134,11 @@ public class Ball : MonoBehaviour
                 transform.position += Vector3.right * speedX * Time.deltaTime;
                 transform.position += Vector3.up * speedY * Time.deltaTime; //move with the gravity
 
-                if (IsRightOut() || IsLeftOut()) speedX *= -0.8f; //Bounce on side walls
+                if (IsRightOut() || IsLeftOut())
+                {
+                    PlayHitSound();
+                    speedX *= -0.8f; //Bounce on side walls
+                }
                 CorrectXPosition();
             }
 
@@ -140,6 +156,7 @@ public class Ball : MonoBehaviour
 
         //Update the graphical(canvas bgs) delimiter
         UpdateDelimiter();
+        UpdateMarkers();
     }
 
     void SetTurnReady(bool state)
@@ -147,10 +164,20 @@ public class Ball : MonoBehaviour
         if (state)
         {
             this.GetComponent<SpriteRenderer>().color = Color.white;
+            markTop.SetActive(false);
+            markBot.SetActive(false);
         }
         else
         {
             this.GetComponent<SpriteRenderer>().color = idleBallColor;
+            if (topTurn)
+            {
+                markTop.SetActive(true);
+            }
+            else
+            {
+                markBot.SetActive(true);
+            }
         }
         turnReady = state;
     }
@@ -258,6 +285,52 @@ public class Ball : MonoBehaviour
         else if (IsLeftOut()) transform.position = new Vector3(GetScreenLeft() + GetBallWidth() / 2 * 1.05f, transform.position.y, transform.position.z);
     }
 
+    void UpdateDelimiter()
+    {
+        delimiter = Mathf.Lerp(delimiter, (topTurn ? 0.25f : 0.75f), Time.deltaTime * delimiterSpeed);
+        bgUp.GetComponent<LayoutElement>().flexibleHeight = delimiter;
+        bgDown.GetComponent<LayoutElement>().flexibleHeight = 1.0f - delimiter;
+    }
+
+    void UpdateMarkers()
+    {
+        if (!turnReady)
+        {
+            if (topTurn)
+            {
+                if (IsScreenUp()) return;
+                if (markTop.transform.localScale.x < 0.05)
+                {
+                    markTop.transform.localScale = initialBallScale;
+                    PlayBeepSound();
+                }
+                else markTop.transform.localScale -= new Vector3(0.5f, 0.5f, 0.5f) * Time.deltaTime;
+            }
+            else
+            {
+                if (!IsScreenUp()) return;
+                if (markBot.transform.localScale.x < 0.05)
+                {
+                    markBot.transform.localScale = initialBallScale;
+                    PlayBeepSound();
+                }
+                else markBot.transform.localScale -= new Vector3(0.5f, 0.5f, 0.5f) * Time.deltaTime;
+            }
+
+        }
+    }
+
+    void PlayBeepSound()
+    {
+        GetComponents<AudioSource>()[0].Play();
+    }
+
+    void PlayHitSound()
+    {
+        GetComponents<AudioSource>()[1].volume = Mathf.Clamp(Mathf.Abs(speedX/10.0f), 0.0f, 1.0f);
+        GetComponents<AudioSource>()[1].Play();
+    }
+
     //Gets and Isses //////////////////////////////////////////////////////////////////////////////////////////////////
     Vector3 GetWorldPoint(Vector3 screenPos) { return Camera.main.ScreenToWorldPoint(screenPos); }
 
@@ -266,13 +339,6 @@ public class Ball : MonoBehaviour
         v.x += Screen.width / 2;
         v.y += Screen.height / 2;
         return Camera.main.ScreenToWorldPoint(v);
-    }
-
-    void UpdateDelimiter()
-    {
-        delimiter = Mathf.Lerp(delimiter, (topTurn ? 0.25f : 0.75f), Time.deltaTime * delimiterSpeed);
-        bgUp.GetComponent<LayoutElement>().flexibleHeight = delimiter;
-        bgDown.GetComponent<LayoutElement>().flexibleHeight = 1.0f - delimiter;
     }
 
     bool IsScreenUp()

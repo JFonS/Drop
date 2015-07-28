@@ -3,6 +3,11 @@ using System.Collections;
 
 public class Menu : MonoBehaviour 
 {
+    public GameObject bgMusic;
+    void Awake()
+    {
+        DontDestroyOnLoad(bgMusic);
+    }
 	void Start () {}
 	void Update () {}
 

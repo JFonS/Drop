@@ -133,7 +133,7 @@ public class Ball : MonoBehaviour
 
                 transform.position += Vector3.right * speedX * Time.deltaTime;
                 transform.position += Vector3.up * speedY * Time.deltaTime; //move with the gravity
-
+                
                 if (IsRightOut() || IsLeftOut())
                 {
                     PlayHitSound();
@@ -218,7 +218,7 @@ public class Ball : MonoBehaviour
         if (!IsScreenUp()) topScore++; else botScore++;
         FillBallPoints();
         if (topScore >= 3 || botScore >= 3) OnWin();
-        else Reset();
+        else StartCoroutine(DelayedReset());
     }
 
     void OnWin()
@@ -238,11 +238,13 @@ public class Ball : MonoBehaviour
 
     void EndGame()
     {
-        Reset();
+        StartCoroutine(DelayedReset());
         topScore = botScore = 0; FillBallPoints();
     }
+
     void Reset()
     {
+
         gameStarted = gameFinished = false;
         holding = false;
         transform.localScale = initialBallScale;
@@ -258,6 +260,12 @@ public class Ball : MonoBehaviour
 
         topWinText.text = "";
         botWinText.text = "";
+    }
+
+    IEnumerator DelayedReset()
+    {
+        yield return new WaitForSeconds(1.0f);
+        Reset();
     }
 
     void FillBallPoints()

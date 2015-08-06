@@ -5,13 +5,13 @@ using System.Collections;
 public class Ball : MonoBehaviour
 {
     private static readonly string WinText = "YOU WIN", LoseText = "YOU LOSE";
-    private static readonly float DelimiterOffset = 0.3f; //This is the ratio of the screen at which the colors lerp when it's somebody's turn
+   // private static readonly float DelimiterOffset = 0.3f; //This is the ratio of the screen at which the colors lerp when it's somebody's turn
 
     public float delimiter = 0.5f; //This is the imaginary line which when is crossed by the ball, the ball is automatically dropped
     public float delimiterSpeed = 1.0f;
 
     public static Vector3 initialBallPosition, initialBallScale;
-    public bool gameStarted = false, gameFinished;
+    public bool gameStarted = false, gameFinished, waiting = false;
 
     public static readonly float Gravity = 0.25f;
     public bool upwardsGravity = false;
@@ -73,7 +73,7 @@ public class Ball : MonoBehaviour
         //Check back button
         if (Input.GetKey(KeyCode.Escape)) { Application.LoadLevel("Menu"); return; }
 
-        if (!gameFinished)
+        if (!gameFinished && !waiting)
         {
             if ((topTurn && !IsScreenUp() && turnReady) || (!topTurn && IsScreenUp() && turnReady)) OnDrop();
             if (turnReady && (IsUpOut() || IsDownOut())) OnScore();
@@ -260,10 +260,12 @@ public class Ball : MonoBehaviour
 
         topWinText.text = "";
         botWinText.text = "";
+        waiting = false;
     }
 
     IEnumerator DelayedReset()
     {
+        waiting = true;
         yield return new WaitForSeconds(1.0f);
         Reset();
     }

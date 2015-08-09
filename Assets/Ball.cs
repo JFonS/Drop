@@ -297,7 +297,15 @@ public class Ball : MonoBehaviour
 
     void UpdateDelimiter()
     {
-        delimiter = Mathf.Lerp(delimiter, (topTurn ? 0.25f : 0.75f), Time.deltaTime * delimiterSpeed);
+        if (waiting && !gameFinished) 
+        {
+            delimiter = Mathf.Lerp(delimiter, (topTurn ? 0f : 1f), Time.deltaTime * delimiterSpeed*1.1f);
+        }
+        else
+        {
+            delimiter = Mathf.Lerp(delimiter, (topTurn ? 0.25f : 0.75f), Time.deltaTime * delimiterSpeed);
+            
+        }
         bgUp.GetComponent<LayoutElement>().flexibleHeight = delimiter;
         bgDown.GetComponent<LayoutElement>().flexibleHeight = 1.0f - delimiter;
     }
